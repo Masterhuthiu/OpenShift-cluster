@@ -1,1 +1,554 @@
+= Portfolio: OpenShift & Kubernetes Administration | Cloud-Native Application & Database Deployment
+:author: Your Name
+:email: cosa199212@gmail.com
+:revnumber: v2.0
+:toc: left
+:toclevels: 3
+:icons: font
+:source-highlighter: rouge
 
+== 1. Professional Overview
+
+This portfolio demonstrates hands-on experience in administering OpenShift (CRC & Managed OpenShift 4.x) and Kubernetes clusters, deploying cloud-native microservices, managing containerized databases, and implementing production-grade operational practices.
+
+Core Competencies:
+
+* OpenShift 4.x Cluster Administration
+* Kubernetes Resource Management
+* RBAC & Security Handling
+* Microservices Deployment
+* MongoDB Cloud-Native Deployment
+* Infrastructure as Code (IaC)
+* Troubleshooting & Diagnostics
+* Service Discovery & Internal Networking
+
+---
+
+== 2. OpenShift Cluster Administration
+
+=== 2.1. Cluster Environment
+
+Platform: OpenShift Container Platform 4.20.3  
+Environment: Managed OpenShift (openshiftapps.com) + CRC local cluster  
+Access Method: Token-based CLI authentication
+
+[source,bash]
+----
+oc login --token=<TOKEN> --server=https://api.cluster:6443
+oc get clusterversion
+----
+
+Capabilities Demonstrated:
+
+* Cluster version verification
+* Namespace isolation
+* CLI-based cluster operations
+* Deployment inspection
+* Event-driven troubleshooting
+
+---
+
+=== 2.2. Cluster-Admin Privilege Recovery (CRC)
+
+In scenarios involving lost authentication access, administrative credentials can be recovered directly from the CRC system container.
+
+[source,powershell]
+----
+podman cp crc:/var/lib/crc/resources/kubeadmin/kubeconfig ./kubeconfig-admin
+
+$env:KUBECONFIG="$(Get-Location)\kubeconfig-admin"
+
+oc whoami
+# Expected: system:admin
+----
+
+Technical Understanding:
+
+* Kubeconfig structure
+* OpenShift authentication model
+* Privilege escalation recovery procedures
+
+---
+
+=== 2.3. Resource & Namespace Management
+
+Managing application lifecycle and environment isolation.
+
+[source,powershell]
+----
+oc delete deployment,svc mongodb -n default
+oc delete namespace admin-vui-ve
+----
+
+Skills Applied:
+
+* Namespace cleanup
+* Resource lifecycle management
+* Environment isolation best practices
+
+---
+
+== 3. Application Deployment: JHipster Gateway
+
+Namespace: cosa199212-dev  
+Application Type: Spring Boot Microservice (Gateway)
+
+=== 3.1 Deployment Strategy
+
+* RollingUpdate strategy
+* ReplicaSet orchestration
+* ImageStream trigger automation
+* SHA256 image digest pinning
+* Environment-based configuration
+
+[source,bash]
+----
+oc describe deploy jhipster-gateway
+oc scale deploy jhipster-gateway --replicas=1
+oc get events --sort-by=.metadata.creationTimestamp
+----
+
+Operational Knowledge:
+
+* Pod scheduling lifecycle
+* Image pull verification
+* Deployment revision tracking
+* ReplicaSet scaling behavior
+
+---
+
+=== 3.2 ImageStream-Based Automation
+
+[source,yaml]
+----
+image.openshift.io/triggers:
+- from:
+    kind: ImageStreamTag
+    name: jhipster-gateway:latest
+  fieldPath: spec.template.spec.containers[?(@.name=="jhipster-gateway")].image
+----
+
+Highlights:
+
+* Automated rollout on image update
+* Secure immutable image references
+* CI/CD-ready deployment model
+
+---
+
+== 4. MongoDB Cloud-Native Deployment
+
+=== 4.1 Infrastructure as Code (IaC)
+
+MongoDB deployed using Kubernetes Manifests to ensure reproducibility.
+
+[source,powershell]
+----
+oc apply -f K8S/mongodb-k8s.yml -n default
+----
+
+Demonstrates:
+
+* Declarative infrastructure
+* Service abstraction
+* Stateful workload understanding
+
+---
+
+=== 4.2 Data Seeding Without Image Rebuild
+
+Professional technique to inject sample data (500 movie records) directly into a running MongoDB container.
+
+[source,powershell]
+----
+$POD_NAME = (oc get pods -n default -l app=mongodb -o jsonpath='{.items[0].metadata.name}')
+
+oc cp src/main/docker/DataSample/movies.json ${POD_NAME}:/tmp/movies.json -n default
+
+oc exec -n default $POD_NAME -- \
+mongoimport --db movieCatalogService \
+--collection movies \
+--file /tmp/movies.json
+----
+
+Skills Demonstrated:
+
+* Pod dynamic querying via Label Selector
+* Secure file transfer into container
+* In-cluster database manipulation
+* Operational data engineering practice
+
+---
+
+== 5. Connectivity & Networking
+
+=== 5.1 Port Forwarding for External Access
+
+[source,powershell]
+----
+oc port-forward svc/mongodb 27017:27017 -n default
+----
+
+Use Case:
+
+* GUI-based verification via MongoDB Compass
+* Secure temporary local access tunnel
+* Internal service exposure without public route
+
+---
+
+=== 5.2 Kubernetes Native Service Discovery
+
+Spring Boot configuration leveraging internal DNS:
+
+[source,yaml]
+----
+spring:
+  data:
+    mongodb:
+      uri: mongodb://mongodb:27017/movieCatalogService
+----
+
+Architecture Principle:
+
+* Service-to-service communication via DNS
+* No dependency on static IPs
+* Built-in load balancing via Kubernetes Service
+
+---
+
+=== 5.3 Kubernetes vs Consul
+
+By leveraging Kubernetes-native capabilities:
+
+* Service Discovery → Kube-DNS
+* Load Balancing → Kubernetes Service
+* Reduced operational complexity
+* Fewer external dependencies
+
+---
+
+== 6. Troubleshooting & Diagnostics
+
+Tools Used:
+
+[source,bash]
+----
+oc describe pod
+oc logs <pod-name>
+oc get events
+oc get pods -o wide
+----
+
+Handled Scenarios:
+
+* CrashLoopBackOff diagnosis
+* Image pull errors
+* Deployment revision mismatch
+* Pod scheduling verification
+* Environment misconfiguration detection
+
+---
+
+== 7. Architecture Overview
+
+User → Route → Service → Deployment → Pod  
+                                    ↓  
+                              Container Image  
+                                    ↓  
+                               MongoDB Database  
+
+Demonstrates understanding of:
+
+* OpenShift routing layer
+* Internal service networking
+* Containerized microservice architecture
+* Database integration in Kubernetes
+
+---
+
+== 8. Technical Competency Matrix
+
+[cols="1,3"]
+|===
+| Skill | Technical Description
+
+| OpenShift Administration | Cluster management, ImageStream triggers, deployment scaling, event analysis.
+| RBAC & Security | Kubeconfig structure, privilege handling, namespace isolation.
+| Infrastructure as Code | Declarative YAML manifests for workload deployment.
+| Troubleshooting | Log analysis, Pod lifecycle debugging, CrashLoopBackOff resolution.
+| Networking | Service discovery, internal DNS, port-forwarding, route exposure.
+| Database Operations | MongoDB deployment, in-cluster data import, service connectivity.
+| CI/CD Awareness | Image-based rollout automation and revision control.
+|===
+
+---
+
+== 9. Professional Strengths
+
+* Strong CLI proficiency (oc / kubectl)
+* Production-ready deployment thinking
+* Deep understanding of Kubernetes internals
+* Cloud-native system architecture awareness
+* Secure and automated workload management mindset
+
+---
+
+== 10. Career Objective
+
+To contribute as an OpenShift Administrator or DevOps Engineer in a cloud-native environment, focusing on scalable infrastructure, automation, and secure application delivery.
+
+== 11. CI/CD Implementation with OpenShift Pipelines (Tekton)
+
+=== 11.1 CI/CD Architecture Overview
+
+Implemented a Kubernetes-native CI/CD workflow using OpenShift Pipelines (Tekton) to automate:
+
+* Source code retrieval from Git repository
+* Container image build
+* Image push to internal registry
+* Automated deployment rollout via ImageStream trigger
+
+Pipeline Flow:
+
+Git Push → PipelineRun → Build Task → Push Image → ImageStream Update → Deployment Rollout
+
+---
+
+=== 11.2 Pipeline Components
+
+Core Tekton Resources:
+
+* Task
+* Pipeline
+* PipelineRun
+* Workspace
+* ServiceAccount
+
+Example: Pipeline Definition
+
+[source,yaml]
+----
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: jhipster-ci-pipeline
+spec:
+  workspaces:
+    - name: shared-workspace
+  tasks:
+    - name: clone-repo
+      taskRef:
+        name: git-clone
+      workspaces:
+        - name: output
+          workspace: shared-workspace
+
+    - name: build-image
+      runAfter: ["clone-repo"]
+      taskRef:
+        name: buildah
+      params:
+        - name: IMAGE
+          value: image-registry.openshift-image-registry.svc:5000/cosa199212-dev/jhipster-gateway:latest
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+----
+
+Pipeline Execution:
+
+[source,bash]
+----
+oc create -f pipeline.yaml
+oc create -f pipelinerun.yaml
+oc get pipelineruns
+----
+
+Capabilities Demonstrated:
+
+* Kubernetes-native CI/CD automation
+* Container build using Buildah
+* Registry authentication via ServiceAccount
+* Event-driven deployment rollout
+
+---
+
+=== 11.3 ImageStream Integration with CI/CD
+
+Pipeline pushes image → ImageStream updated → Deployment auto-triggers rollout.
+
+Benefits:
+
+* Immutable image references
+* Zero manual deployment
+* Full traceability of revisions
+
+---
+
+== 12. Security Implementation
+
+=== 12.1 Security Context Constraints (SCC)
+
+Understanding OpenShift's SCC model to control:
+
+* Privileged container execution
+* UID/GID restrictions
+* Volume access control
+* Host networking permissions
+
+Example: Assign custom SCC to ServiceAccount
+
+[source,bash]
+----
+oc adm policy add-scc-to-user restricted-v2 -z pipeline -n cosa199212-dev
+----
+
+Security Principles Applied:
+
+* Least privilege principle
+* Avoid privileged containers
+* Namespace-level isolation
+
+---
+
+=== 12.2 RBAC (Role-Based Access Control)
+
+Implemented granular RBAC policies to restrict access between:
+
+* Developers
+* CI/CD pipelines
+* Administrators
+
+Example: Role Definition
+
+[source,yaml]
+----
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: cosa199212-dev
+  name: deployment-manager
+rules:
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list", "watch", "update"]
+----
+
+Bind Role to User:
+
+[source,bash]
+----
+oc create rolebinding deploy-access \
+  --role=deployment-manager \
+  --user=developer1 \
+  -n cosa199212-dev
+----
+
+Security Competencies:
+
+* Fine-grained permission control
+* Namespace isolation enforcement
+* CI/CD service account restriction
+* Production access separation
+
+---
+
+=== 12.3 Secrets Management & Encryption
+
+Secure handling of database credentials and registry authentication.
+
+Create Secret:
+
+[source,bash]
+----
+oc create secret generic mongodb-credentials \
+  --from-literal=username=dbuser \
+  --from-literal=password=strongpassword \
+  -n cosa199212-dev
+----
+
+Inject Secret into Deployment:
+
+[source,yaml]
+----
+env:
+- name: MONGO_USERNAME
+  valueFrom:
+    secretKeyRef:
+      name: mongodb-credentials
+      key: username
+----
+
+Security Best Practices Applied:
+
+* Avoid hardcoded credentials
+* Environment variable injection via Secret
+* Registry authentication via docker-registry Secret
+* Awareness of etcd encryption at rest (cluster-level feature)
+
+---
+
+== 13. Advanced Operational Capabilities
+
+=== 13.1 Resource Governance
+
+* Resource requests & limits
+* Horizontal Pod Autoscaler (HPA)
+* Namespace ResourceQuota
+
+Example:
+
+[source,yaml]
+----
+resources:
+  requests:
+    cpu: "250m"
+    memory: "512Mi"
+  limits:
+    cpu: "500m"
+    memory: "1Gi"
+----
+
+---
+
+=== 13.2 Production Readiness
+
+Implemented:
+
+* Liveness Probe
+* Readiness Probe
+* Rolling updates with zero downtime
+* Deployment revision tracking
+* Controlled rollout & rollback strategy
+
+---
+
+== 14. Senior-Level Competency Summary
+
+[cols="1,3"]
+|===
+| Domain | Expertise Demonstrated
+
+| CI/CD Automation | Tekton Pipeline design, Buildah builds, automated rollout.
+| Container Security | SCC management, least privilege enforcement.
+| Access Control | Custom RBAC policies, namespace isolation.
+| Secrets Handling | Secure credential injection & registry auth.
+| Deployment Strategy | Rolling updates, revision history tracking.
+| Cloud-Native Architecture | Kubernetes-native service discovery & automation.
+|===
+
+---
+
+== 15. Professional Maturity Level
+
+Based on the implemented architecture and operational practices:
+
+Current Capability Level: Mid → Senior DevOps / OpenShift Platform Engineer
+
+Demonstrates:
+
+* Production-ready deployment knowledge
+* Infrastructure automation mindset
+* Security-first architecture thinking
+* Kubernetes-native CI/CD implementation
